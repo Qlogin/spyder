@@ -765,7 +765,7 @@ def _get_globals():
     return namespace
 
 
-def runfile(filename, args=None, wdir=None, namespace=None, post_mortem=False):
+def runfile(filename, args=None, wdir=None, namespace=None, post_mortem=False, env=None):
     """
     Run filename
     args: command line arguments (string)
@@ -779,6 +779,8 @@ def runfile(filename, args=None, wdir=None, namespace=None, post_mortem=False):
         # AttributeError --> systematically raised in Python 3
         pass
     global __umr__
+    if not env is None:
+        os.environ.update([tuple(x.split('=')) for x in env.split(';')])
     if os.environ.get("UMR_ENABLED", "").lower() == "true":
         if __umr__ is None:
             namelist = os.environ.get("UMR_NAMELIST", None)

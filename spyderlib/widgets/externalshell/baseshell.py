@@ -52,7 +52,7 @@ class ExternalShellBase(QWidget):
     redirect_stdio = Signal(bool)
     sig_finished = Signal()
     
-    def __init__(self, parent=None, fname=None, wdir=None,
+    def __init__(self, parent=None, fname=None, wdir=None, env=None,
                  history_filename=None, show_icontext=True,
                  light_background=True, menu_actions=None,
                  show_buttons_inside=True, show_elapsed_time=True):
@@ -72,6 +72,7 @@ class ExternalShellBase(QWidget):
             wdir = osp.dirname(osp.abspath(fname))
         self.wdir = wdir if osp.isdir(wdir) else None
         self.arguments = ""
+        self.env = env
         
         self.shell = self.SHELL_CLASS(parent, get_conf_path(history_filename))
         self.shell.set_light_background(light_background)

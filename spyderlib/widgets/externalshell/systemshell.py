@@ -30,10 +30,10 @@ class ExternalSystemShell(ExternalShellBase):
     SHELL_CLASS = TerminalWidget
     started = Signal()
     
-    def __init__(self, parent=None, wdir=None, path=[], light_background=True,
+    def __init__(self, parent=None, wdir=None, env=None, path=[], light_background=True,
                  menu_actions=None, show_buttons_inside=True,
                  show_elapsed_time=True):
-        ExternalShellBase.__init__(self, parent=parent, fname=None, wdir=wdir,
+        ExternalShellBase.__init__(self, parent=parent, fname=None, wdir=wdir, env=env,
                                    history_filename='.history',
                                    light_background=light_background,
                                    menu_actions=menu_actions,
@@ -64,6 +64,8 @@ class ExternalSystemShell(ExternalShellBase):
         # PYTHONPATH (in case we use Python in this terminal, e.g. py2exe)
         env = [to_text_string(_path)
                for _path in self.process.systemEnvironment()]
+        if self.env:
+           env += self.env.split(';')
 
         processEnvironment = QProcessEnvironment()
         for envItem in env:
