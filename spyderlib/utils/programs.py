@@ -55,13 +55,13 @@ def find_program(basename):
             return path
 
 
-def run_program(name, args=[], cwd=None):
+def run_program(name, args=[], cwd=None, env=None):
     """Run program in a separate process"""
     assert isinstance(args, (tuple, list))
     path = find_program(name)
     if not path:
         raise RuntimeError("Program %s was not found" % name)
-    subprocess.Popen([path]+args, cwd=cwd)
+    subprocess.Popen([path]+args, cwd=cwd, env=env)
 
 
 def start_file(filename):

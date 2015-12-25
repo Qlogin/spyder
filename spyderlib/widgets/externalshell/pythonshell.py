@@ -168,7 +168,7 @@ class ExternalPythonShell(ExternalShellBase):
     
     def __init__(self, parent=None, fname=None, wdir=None,
                  interact=False, debug=False, post_mortem=False,
-                 path=[], python_args='',
+                 path=[], python_args='', env='',
                  ipykernel=False, arguments='', stand_alone=None,
                  umr_enabled=True, umr_namelist=[], umr_verbose=True,
                  pythonstartup=None, pythonexecutable=None,
@@ -202,7 +202,7 @@ class ExternalPythonShell(ExternalShellBase):
         self.umr_verbose = umr_verbose
         self.autorefresh_timeout = autorefresh_timeout
         self.autorefresh_state = autorefresh_state
-                
+
         self.namespacebrowser_button = None
         self.cwd_button = None
         self.env_button = None
@@ -211,7 +211,7 @@ class ExternalPythonShell(ExternalShellBase):
 
         self.notification_thread = None
         
-        ExternalShellBase.__init__(self, parent=parent, fname=fname, wdir=wdir,
+        ExternalShellBase.__init__(self, parent=parent, fname=fname, wdir=wdir, env=env,
                                    history_filename='history.py',
                                    light_background=light_background,
                                    menu_actions=menu_actions,
@@ -495,6 +495,9 @@ class ExternalPythonShell(ExternalShellBase):
 
         # External interpreter
         env.append('EXTERNAL_INTERPRETER=%r' % self.external_interpreter)
+
+        if self.env:
+           env.update(x.split('=') for x in self.env.split(';'))
 
         # Add sitecustomize path to path list
         pathlist = []

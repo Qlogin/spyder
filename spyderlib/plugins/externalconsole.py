@@ -598,7 +598,7 @@ class ExternalConsole(SpyderPluginWidget):
             else:
                 return shellwidgets[0].shell
         
-    def run_script_in_current_shell(self, filename, wdir, args, debug, 
+    def run_script_in_current_shell(self, filename, wdir, args, env, debug,
                   post_mortem):
         """Run script in current shell, if any"""
         norm = lambda text: remove_backslashes(to_text_string(text))
@@ -608,6 +608,8 @@ class ExternalConsole(SpyderPluginWidget):
             line += ", args='%s'" % norm(args)
         if wdir:
             line += ", wdir='%s'" % norm(wdir)
+        if env:
+            line += ", env='%s'" % norm(env)
         if post_mortem:
             line += ', post_mortem=True'
         line += ")"
@@ -660,7 +662,7 @@ class ExternalConsole(SpyderPluginWidget):
         for shellwidget in self.shellwidgets:
             shellwidget.shell.set_spyder_breakpoints()    
     
-    def start(self, fname, wdir=None, args='', interact=False, debug=False,
+    def start(self, fname, wdir=None, args='', env='', interact=False, debug=False,
               python=True, ipykernel=False, ipyclient=None,
               give_ipyclient_focus=True, python_args='', post_mortem=True):
         """
@@ -671,6 +673,7 @@ class ExternalConsole(SpyderPluginWidget):
           None: open an interpreter
         wdir: working directory
         args: command line options of the Python script
+        env: environment variables
         interact: inspect script interactively after its execution
         debug: run pdb
         python: True: Python interpreter, False: terminal
@@ -758,7 +761,7 @@ class ExternalConsole(SpyderPluginWidget):
                            path=pythonpath,
                            python_args=python_args,
                            ipykernel=ipykernel,
-                           arguments=args, stand_alone=sa_settings,
+                           arguments=args, env=env, stand_alone=sa_settings,
                            pythonstartup=pythonstartup,
                            pythonexecutable=pythonexecutable,
                            external_interpreter=external_interpreter,
@@ -785,15 +788,15 @@ class ExternalConsole(SpyderPluginWidget):
                 if programs.is_program_installed(cmd):
                     if wdir:
                         args.extend(['--working-directory=%s' % wdir])
-                    programs.run_program(cmd, args)
+                    programs.run_program(cmd, args, env=env)
                     return
                 cmd = 'konsole'
                 if programs.is_program_installed(cmd):
                     if wdir:
                         args.extend(['--workdir', wdir])
-                    programs.run_program(cmd, args)
+                    programs.run_program(cmd, args, env=env)
                     return
-            shellwidget = ExternalSystemShell(self, wdir, path=pythonpath,
+            shellwidget = ExternalSystemShell(self, wdir, env=env, path=pythonpath,
                                           light_background=light_background,
                                           menu_actions=self.menu_actions,
                                           show_buttons_inside=False,
@@ -1194,7 +1197,7 @@ class ExternalConsole(SpyderPluginWidget):
         if wdir is None:
             wdir = getcwd()
         self.main.ipyconsole.visibility_changed(True)
-        self.start(fname=None, wdir=to_text_string(wdir), args='',
+        self.start(fname=None, wdir=to_text_string(wdir), args='', env=None,
                    interact=True, debug=False, python=True, ipykernel=True,
                    ipyclient=client, give_ipyclient_focus=give_focus)
 
@@ -1203,7 +1206,7 @@ class ExternalConsole(SpyderPluginWidget):
         """Open terminal"""
         if wdir is None:
             wdir = getcwd()
-        self.start(fname=None, wdir=to_text_string(wdir), args='',
+        self.start(fname=None, wdir=to_text_string(wdir), args='', env=None,
                    interact=True, debug=False, python=False)
 
     @Slot()
@@ -1214,7 +1217,7 @@ class ExternalConsole(SpyderPluginWidget):
                 getcwd(), _("Python scripts")+" (*.py ; *.pyw ; *.ipy)")
         self.redirect_stdio.emit(True)
         if filename:
-            self.start(fname=filename, wdir=None, args='',
+            self.start(fname=filename, wdir=None, args='', env=None,
                        interact=False, debug=False)
         
     def set_umr_namelist(self):

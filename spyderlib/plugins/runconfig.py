@@ -48,6 +48,8 @@ class RunConfiguration(object):
         self.args_enabled = None
         self.wdir = None
         self.wdir_enabled = None
+        self.env = None
+        self.env_enabled = None
         self.current = None
         self.systerm = None
         self.interact = None
@@ -71,6 +73,8 @@ class RunConfiguration(object):
         else:
             self.wdir = options.get('workdir', getcwd())
             self.wdir_enabled = options.get('workdir/enabled', False)
+        self.env = options.get('env', '')
+        self.env_enabled = options.get('env/enabled', False)
         self.current = options.get('current',
                            CONF.get('run', CURRENT_INTERPRETER_OPTION, True))
         self.systerm = options.get('systerm',
@@ -90,6 +94,8 @@ class RunConfiguration(object):
                 'args': self.args,
                 'workdir/enabled': self.wdir_enabled,
                 'workdir': self.wdir,
+                'env/enabled': self.env_enabled,
+                'env': self.env,
                 'current': self.current,
                 'systerm': self.systerm,
                 'interact': self.interact,
@@ -111,12 +117,17 @@ class RunConfiguration(object):
         else:
             return ''
         
+    def get_environment(self):
+        if self.env_enabled:
+            return self.env
+        else:
+            return ''
+        
     def get_python_arguments(self):
         if self.python_args_enabled:
             return self.python_args
         else:
             return ''
-        
         
 def _get_run_configurations():
     history_count = CONF.get('run', 'history', 20)
@@ -140,7 +151,6 @@ def get_run_configuration(fname):
             runconf = RunConfiguration()
             runconf.set(options)
             return runconf
-
 
 class RunConfigOptions(QWidget):
     """Run configuration options"""
@@ -177,9 +187,15 @@ class RunConfigOptions(QWidget):
         browse_btn.clicked.connect(self.select_directory)
         wd_layout.addWidget(browse_btn)
         common_layout.addLayout(wd_layout, 1, 1)
+        self.env_cb = QCheckBox(_("Environment:"))
+        common_layout.addWidget(self.env_cb, 2, 0)
+        self.env_edit = QLineEdit()
+        self.env_cb.toggled.connect(self.env_edit.setEnabled)
+        self.env_edit.setEnabled(False)
+        common_layout.addWidget(self.env_edit, 2, 1)
         self.post_mortem_cb = QCheckBox(_("Enter debugging mode when "
                                           "errors appear during execution"))
-        common_layout.addWidget(self.post_mortem_cb)
+        common_layout.addWidget(self.post_mortem_cb, 3, 0, 1, 2)
         
         # --- Interpreter ---
         interpreter_group = QGroupBox(_("Console"))
@@ -248,6 +264,8 @@ class RunConfigOptions(QWidget):
         self.clo_edit.setText(self.runconf.args)
         self.wd_cb.setChecked(self.runconf.wdir_enabled)
         self.wd_edit.setText(self.runconf.wdir)
+        self.env_cb.setChecked(self.runconf.env_enabled)
+        self.env_edit.setText(self.runconf.env)
         if self.runconf.current:
             self.current_radio.setChecked(True)
         elif self.runconf.systerm:
@@ -265,6 +283,8 @@ class RunConfigOptions(QWidget):
         self.runconf.args = to_text_string(self.clo_edit.text())
         self.runconf.wdir_enabled = self.wd_cb.isChecked()
         self.runconf.wdir = to_text_string(self.wd_edit.text())
+        self.runconf.env_enabled = self.env_cb.isChecked()
+        self.runconf.env = to_text_string(self.env_edit.text())
         self.runconf.current = self.current_radio.isChecked()
         self.runconf.systerm = self.systerm_radio.isChecked()
         self.runconf.interact = self.interact_cb.isChecked()

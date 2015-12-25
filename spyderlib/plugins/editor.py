@@ -361,7 +361,7 @@ class Editor(SpyderPluginWidget):
     redirect_stdio = Signal(bool)
     open_dir = Signal(str)
     breakpoints_saved = Signal()
-    run_in_current_extconsole = Signal(str, str, str, bool, bool)
+    run_in_current_extconsole = Signal(str, str, str, str, bool, bool)
     
     def __init__(self, parent, ignore_last_opened_files=False):
         if PYQT5:
@@ -1889,14 +1889,18 @@ class Editor(SpyderPluginWidget):
             if runconf is None:
                 args = []
                 wdir = None
+                env  = None
             else:
                 args = runconf.get_arguments().split()
                 wdir = runconf.get_working_directory()
+                snewenv = runconf.get_environment()
+                env  = dict(os.environ)
+                env.update(x.split('=') for x in snewenv.split(';'))
                 # Handle the case where wdir comes back as an empty string
                 # when the working directory dialog checkbox is unchecked.
                 if not wdir:
                     wdir = None
-            programs.run_program(WINPDB_PATH, [fname]+args, wdir)
+            programs.run_program(WINPDB_PATH, [fname]+args, wdir, env)
         
     def toggle_eol_chars(self, os_name):
         editor = self.get_current_editor()
@@ -2115,6 +2119,7 @@ class Editor(SpyderPluginWidget):
                 
             wdir = runconf.get_working_directory()
             args = runconf.get_arguments()
+            env  = runconf.get_environment()
             python_args = runconf.get_python_arguments()
             interact = runconf.interact
             post_mortem = runconf.post_mortem
@@ -2123,7 +2128,7 @@ class Editor(SpyderPluginWidget):
             
             python = True # Note: in the future, it may be useful to run
             # something in a terminal instead of a Python interp.
-            self.__last_ec_exec = (fname, wdir, args, interact, debug,
+            self.__last_ec_exec = (fname, wdir, args, env, interact, debug,
                                    python, python_args, current, systerm, post_mortem)
             self.re_run_file()
             if not interact and not debug:
@@ -2152,19 +2157,19 @@ class Editor(SpyderPluginWidget):
             self.save_all()
         if self.__last_ec_exec is None:
             return
-        (fname, wdir, args, interact, debug,
+        (fname, wdir, args, env, interact, debug,
          python, python_args, current, systerm, post_mortem) = self.__last_ec_exec
         if current:
             if self.main.ipyconsole is not None:
                 if self.main.last_console_plugin_focus_was_python:
-                    self.run_in_current_extconsole.emit(fname, wdir, args,
+                    self.run_in_current_extconsole.emit(fname, wdir, args, env,
                                                         debug, post_mortem)
                 else:
                     self.run_in_current_ipyclient.emit(fname, wdir, args,
                                                        debug, post_mortem)
             else:
-                self.run_in_current_extconsole.emit(fname, wdir, args, debug,
-                                                    post_mortem)
+                self.run_in_current_extconsole.emit(fname, wdir, args, env,
+                                                    debug, post_mortem)
         else:
             self.main.open_external_console(fname, wdir, args, interact,
                                             debug, python, python_args,
