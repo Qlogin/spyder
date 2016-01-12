@@ -72,18 +72,6 @@ except ImportError:
 
 
 #==============================================================================
-# Don't show IPython ShimWarning's to our users
-# TODO: Move to Jupyter imports in 3.1
-#==============================================================================
-try:
-    import warnings
-    from IPython.utils.shimmodule import ShimWarning
-    warnings.simplefilter('ignore', ShimWarning)
-except:
-    pass
-
-
-#==============================================================================
 # Qt imports
 #==============================================================================
 from spyderlib.qt import PYQT5
@@ -115,7 +103,7 @@ MAIN_APP = qapplication()
 # Create splash screen out of MainWindow to reduce perceived startup time. 
 #==============================================================================
 from spyderlib.config.base import _, get_image_path, DEV
-SPLASH = QSplashScreen(QPixmap(get_image_path('splash.png'), 'png'))
+SPLASH = QSplashScreen(QPixmap(get_image_path('splash.svg'), 'svg'))
 SPLASH_FONT = SPLASH.font()
 SPLASH_FONT.setPixelSize(10)
 SPLASH.setFont(SPLASH_FONT)
@@ -138,7 +126,7 @@ from spyderlib.config.main import (CONF, EDIT_EXT, IMPORT_EXT, OPEN_FILES_PORT,
                                    is_gtk_desktop)
 from spyderlib.cli_options import get_options
 from spyderlib import dependencies
-from spyderlib.config.ipython import IPYTHON_QT_INSTALLED
+from spyderlib.config.ipython import QTCONSOLE_INSTALLED
 from spyderlib.config.user import NoDefault
 from spyderlib.utils import encoding, programs
 from spyderlib.utils.iofuncs import load_session, save_session, reset_session
@@ -920,7 +908,7 @@ class MainWindow(QMainWindow):
         self.variableexplorer.register_plugin()
 
         # IPython console
-        if IPYTHON_QT_INSTALLED:
+        if QTCONSOLE_INSTALLED:
             self.set_splash(_("Loading IPython console..."))
             from spyderlib.plugins.ipythonconsole import IPythonConsole
             self.ipyconsole = IPythonConsole(self)
