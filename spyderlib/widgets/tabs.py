@@ -31,7 +31,7 @@ from spyderlib.py3compat import PY2, to_text_string
 class TabBar(QTabBar):
     """Tabs base class with drag and drop support"""
     sig_move_tab = Signal((int, int), (str, int, int))
-    
+
     def __init__(self, parent, ancestor):
         QTabBar.__init__(self, parent)
         self.ancestor = ancestor
@@ -39,43 +39,44 @@ class TabBar(QTabBar):
         # To style tabs on Mac
         if sys.platform == 'darwin':
             self.setObjectName('plugin-tab')
-            
+
         # Dragging tabs
         self.__drag_start_pos = QPoint()
-        self.setAcceptDrops(True)
+        self.set_draggable(True)
 
     def mousePressEvent(self, event):
         """Reimplement Qt method"""
         if event.button() == Qt.LeftButton:
             self.__drag_start_pos = QPoint(event.pos())
         QTabBar.mousePressEvent(self, event)
-    
+
     def mouseMoveEvent(self, event):
         """Override Qt method"""
-        if event.buttons() == Qt.MouseButtons(Qt.LeftButton) and \
-           (event.pos() - self.__drag_start_pos).manhattanLength() > \
-                QApplication.startDragDistance():
-            drag = QDrag(self)
-            mimeData = QMimeData()
-            # Converting id's to long to avoid an OverflowError with PySide
-            if PY2:
-                ancestor_id = long(id(self.ancestor))
-                parent_widget_id = long(id(self.parentWidget()))
-                self_id = long(id(self))
-            else:
-                ancestor_id = id(self.ancestor)
-                parent_widget_id = id(self.parentWidget())
-                self_id = id(self)
-            mimeData.setData("parent-id", QByteArray.number(ancestor_id))
-            mimeData.setData("tabwidget-id",
-                             QByteArray.number(parent_widget_id))
-            mimeData.setData("tabbar-id", QByteArray.number(self_id))
-            mimeData.setData("source-index", 
-                         QByteArray.number(self.tabAt(self.__drag_start_pos)))
-            drag.setMimeData(mimeData)
-            drag.exec_()
+        if self.is_draggable:
+            if event.buttons() == Qt.MouseButtons(Qt.LeftButton) and \
+               (event.pos() - self.__drag_start_pos).manhattanLength() > \
+                    QApplication.startDragDistance():
+                drag = QDrag(self)
+                mimeData = QMimeData()
+                # Converting id's to long to avoid an OverflowError with PySide
+                if PY2:
+                    ancestor_id = long(id(self.ancestor))
+                    parent_widget_id = long(id(self.parentWidget()))
+                    self_id = long(id(self))
+                else:
+                    ancestor_id = id(self.ancestor)
+                    parent_widget_id = id(self.parentWidget())
+                    self_id = id(self)
+                mimeData.setData("parent-id", QByteArray.number(ancestor_id))
+                mimeData.setData("tabwidget-id",
+                                 QByteArray.number(parent_widget_id))
+                mimeData.setData("tabbar-id", QByteArray.number(self_id))
+                mimeData.setData("source-index",
+                             QByteArray.number(self.tabAt(self.__drag_start_pos)))
+                drag.setMimeData(mimeData)
+                drag.exec_()
         QTabBar.mouseMoveEvent(self, event)
-    
+
     def dragEnterEvent(self, event):
         """Override Qt method"""
         mimeData = event.mimeData()
@@ -84,7 +85,7 @@ class TabBar(QTabBar):
            mimeData.data("parent-id").toLong()[0] == id(self.ancestor):
             event.acceptProposedAction()
         QTabBar.dragEnterEvent(self, event)
-    
+
     def dropEvent(self, event):
         """Override Qt method"""
         mimeData = event.mimeData()
@@ -94,10 +95,10 @@ class TabBar(QTabBar):
             index_to = self.count()
         if mimeData.data("tabbar-id").toLong()[0] != id(self):
             tabwidget_from = str(mimeData.data("tabwidget-id").toLong()[0])
-            
-            # We pass self object ID as a QString, because otherwise it would 
-            # depend on the platform: long for 64bit, int for 32bit. Replacing 
-            # by long all the time is not working on some 32bit platforms 
+
+            # We pass self object ID as a QString, because otherwise it would
+            # depend on the platform: long for 64bit, int for 32bit. Replacing
+            # by long all the time is not working on some 32bit platforms
             # (see Issue 1094, Issue 1098)
             self.sig_move_tab[(str, int, int)].emit(tabwidget_from, index_from,
                                                     index_to)
@@ -107,12 +108,15 @@ class TabBar(QTabBar):
             self.sig_move_tab.emit(index_from, index_to)
             event.acceptProposedAction()
         QTabBar.dropEvent(self, event)
-        
-        
+
+    def set_draggable(self, draggable):
+        self.is_draggable = draggable
+        self.setAcceptDrops(draggable)
+
 class BaseTabs(QTabWidget):
     """TabWidget with context menu and corner widgets"""
     sig_close_tab = Signal(int)
-    
+
     def __init__(self, parent, actions=None, menu=None,
                  corner_widgets=None, menu_use_tooltips=False):
         QTabWidget.__init__(self, parent)
@@ -124,14 +128,14 @@ class BaseTabs(QTabWidget):
 
         self.corner_widgets = {}
         self.menu_use_tooltips = menu_use_tooltips
-        
+
         if menu is None:
             self.menu = QMenu(self)
             if actions:
                 add_actions(self.menu, actions)
         else:
             self.menu = menu
-            
+
         # Corner widgets
         if corner_widgets is None:
             corner_widgets = {}
@@ -147,7 +151,7 @@ class BaseTabs(QTabWidget):
         corner_widgets[Qt.TopLeftCorner] += [self.browse_button]
 
         self.set_corner_widgets(corner_widgets)
-        
+
     def update_browse_tabs_menu(self):
         """Update browse tabs menu"""
         self.browse_tabs_menu.clear()
@@ -163,7 +167,7 @@ class BaseTabs(QTabWidget):
                 # Testing if tab names are filenames
                 dirnames.append(osp.dirname(text))
         offset = None
-        
+
         # If tab names are all filenames, removing common path:
         if len(names) == len(dirnames):
             common = get_common_path(dirnames)
@@ -174,7 +178,7 @@ class BaseTabs(QTabWidget):
                 if offset <= 3:
                     # Common path is not a path but a drive letter...
                     offset = None
-                
+
         for index, text in enumerate(names):
             tab_action = create_action(self, text[offset:],
                                        icon=self.tabIcon(index),
@@ -183,7 +187,7 @@ class BaseTabs(QTabWidget):
                                        tip=self.tabToolTip(index))
             tab_action.setChecked(index == self.currentIndex())
             self.browse_tabs_menu.addAction(tab_action)
-        
+
     def set_corner_widgets(self, corner_widgets):
         """
         Set tabs corner widgets
@@ -211,16 +215,16 @@ class BaseTabs(QTabWidget):
                     clayout.addWidget(widget)
             cwidget.setLayout(clayout)
             cwidget.show()
-            
+
     def add_corner_widgets(self, widgets, corner=Qt.TopRightCorner):
         self.set_corner_widgets({corner:
                                  self.corner_widgets.get(corner, [])+widgets})
-        
+
     def contextMenuEvent(self, event):
         """Override Qt method"""
         if self.menu:
             self.menu.popup(event.globalPos())
-            
+
     def mousePressEvent(self, event):
         """Override Qt method"""
         if event.button() == Qt.MidButton:
@@ -230,7 +234,7 @@ class BaseTabs(QTabWidget):
                 event.accept()
                 return
         QTabWidget.mousePressEvent(self, event)
-        
+
     def keyPressEvent(self, event):
         """Override Qt method"""
         ctrl = event.modifiers() & Qt.ControlModifier
@@ -252,7 +256,7 @@ class BaseTabs(QTabWidget):
                 handled = True
         if not handled:
             QTabWidget.keyPressEvent(self, event)
-        
+
     def set_close_function(self, func):
         """Setting Tabs close function
         None -> tabs are not closable"""
@@ -270,16 +274,16 @@ class BaseTabs(QTabWidget):
                                              tip=_("Close current tab"))
             self.setCornerWidget(close_button if state else None)
 
-        
+
 class Tabs(BaseTabs):
     """BaseTabs widget with movable tabs and tab navigation shortcuts"""
     # Signals
     move_data = Signal(int, int)
     move_tab_finished = Signal()
     sig_move_tab = Signal(str, str, int, int)
-    
+
     def __init__(self, parent, actions=None, menu=None,
-                 corner_widgets=None, menu_use_tooltips=False):
+                 corner_widgets=None, menu_use_tooltips=False,setup_shortcuts=True):
         BaseTabs.__init__(self, parent, actions, menu,
                           corner_widgets, menu_use_tooltips)
         tab_bar = TabBar(self, parent)
@@ -287,14 +291,15 @@ class Tabs(BaseTabs):
         tab_bar.sig_move_tab[(str, int, int)].connect(
                                           self.move_tab_from_another_tabwidget)
         self.setTabBar(tab_bar)
-        
-        new_shortcut("Ctrl+Tab", parent, lambda: self.tab_navigate(1))
-        new_shortcut("Shift+Ctrl+Tab", parent, lambda: self.tab_navigate(-1))
-        new_shortcut("Ctrl+W", parent,
-                     lambda: self.sig_close_tab.emit(self.currentIndex()))
-        new_shortcut("Ctrl+F4", parent,
-                     lambda: self.sig_close_tab.emit(self.currentIndex()))
-        
+
+        if setup_shortcuts:
+            new_shortcut("Ctrl+Tab", parent, lambda: self.tab_navigate(1))
+            new_shortcut("Shift+Ctrl+Tab", parent, lambda: self.tab_navigate(-1))
+            new_shortcut("Ctrl+W", parent,
+                         lambda: self.sig_close_tab.emit(self.currentIndex()))
+            new_shortcut("Ctrl+F4", parent,
+                         lambda: self.sig_close_tab.emit(self.currentIndex()))
+
     def tab_navigate(self, delta=1):
         """Ctrl+Tab"""
         if delta > 0 and self.currentIndex() == self.count()-1:
@@ -312,21 +317,21 @@ class Tabs(BaseTabs):
         tip, text = self.tabToolTip(index_from), self.tabText(index_from)
         icon, widget = self.tabIcon(index_from), self.widget(index_from)
         current_widget = self.currentWidget()
-        
+
         self.removeTab(index_from)
         self.insertTab(index_to, widget, icon, text)
         self.setTabToolTip(index_to, tip)
-        
+
         self.setCurrentWidget(current_widget)
         self.move_tab_finished.emit()
 
     def move_tab_from_another_tabwidget(self, tabwidget_from,
                                         index_from, index_to):
         """Move tab from a tabwidget to another"""
-            
-        # We pass self object IDs as QString objs, because otherwise it would 
-        # depend on the platform: long for 64bit, int for 32bit. Replacing 
-        # by long all the time is not working on some 32bit platforms 
+
+        # We pass self object IDs as QString objs, because otherwise it would
+        # depend on the platform: long for 64bit, int for 32bit. Replacing
+        # by long all the time is not working on some 32bit platforms
         # (see Issue 1094, Issue 1098)
         self.sig_move_tab.emit(tabwidget_from, str(id(self)), index_from,
                                index_to)

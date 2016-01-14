@@ -518,7 +518,7 @@ class CodeEditor(TextEditBaseWidget):
         self.painted.connect(self._draw_editor_cell_divider)
 
         self.verticalScrollBar().valueChanged.connect(
-                                       lambda value: self.rehighlight_cells())                                 
+                                       lambda value: self.rehighlight_cells())
 
     def create_shortcuts(self):
         codecomp = create_shortcut(self.do_completion, context='Editor',
@@ -649,7 +649,7 @@ class CodeEditor(TextEditBaseWidget):
                      add_colons=True, auto_unindent=True, indent_chars=" "*4,
                      tab_stop_width=40, cloned_from=None, filename=None,
                      occurrence_timeout=1500):
-        
+
         # Code completion and calltips
         self.set_codecompletion_auto(codecompletion_auto)
         self.set_codecompletion_case(codecompletion_case)
@@ -1349,7 +1349,7 @@ class CodeEditor(TextEditBaseWidget):
         """Set edge line column value"""
         self.edge_line.column = column
         self.edge_line.update()
-    
+
     # -----blank spaces
     def set_blanks_enabled(self, state):
         """Toggle blanks visibility"""
@@ -2500,6 +2500,9 @@ class CodeEditor(TextEditBaseWidget):
     def keyPressEvent(self, event):
         """Reimplement Qt method"""
         key = event.key()
+        if key == Qt.Key_Tab:
+            pass
+
         ctrl = event.modifiers() & Qt.ControlModifier
         shift = event.modifiers() & Qt.ShiftModifier
         text = to_text_string(event.text())
@@ -2516,7 +2519,7 @@ class CodeEditor(TextEditBaseWidget):
 
         for qname, name in checks:
             seq = getattr(QKeySequence, qname)
-            sc = get_shortcut('editor', name)
+            sc = get_shortcut('Editor', name)
             default = QKeySequence(seq).toString()
             if event == seq and sc != default:
                 # if we have overridden it, call our action
@@ -2902,7 +2905,7 @@ class TestWidget(QSplitter):
         self.setStretchFactor(0, 4)
         self.setStretchFactor(1, 1)
         self.setWindowIcon(ima.icon('spyder'))
- 
+
     def load(self, filename):
         self.editor.set_text_from_file(filename)
         self.setWindowTitle("%s - %s (%s)" % (_("Editor"),

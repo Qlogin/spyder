@@ -17,7 +17,7 @@ from spyderlib.qt import is_pyqt46
 from spyderlib.qt.QtGui import (QVBoxLayout, QMessageBox, QMenu, QFont,
                                 QAction, QApplication, QWidget,
                                 QKeySequence, QMainWindow, QSplitter,
-                                QHBoxLayout)
+                                QHBoxLayout, QCursor)
 from spyderlib.qt.QtCore import (Signal, Qt, QFileInfo, QThread, QObject,
                                  QByteArray, QSize, QPoint, QTimer, Slot)
 from spyderlib.qt.compat import getsavefilename
@@ -32,12 +32,12 @@ from spyderlib.utils import encoding, sourcecode, codeanalysis
 from spyderlib.utils import introspection
 from spyderlib.config.base import _, DEBUG, STDOUT, STDERR
 from spyderlib.config.main import EDIT_FILTERS, EDIT_EXT, get_filter, EDIT_FILETYPES
-from spyderlib.config.gui import create_shortcut, new_shortcut
+from spyderlib.config.gui import create_shortcut, new_shortcut, get_shortcut
 from spyderlib.utils.qthelpers import (create_action, add_actions,
                                        mimedata2url, get_filetype_icon,
                                        create_toolbutton)
 from spyderlib.utils import syntaxhighlighters
-from spyderlib.widgets.tabs import BaseTabs
+from spyderlib.widgets.tabs import Tabs
 from spyderlib.widgets.findreplace import FindReplace
 from spyderlib.widgets.editortools import OutlineExplorerWidget
 from spyderlib.widgets.status import (ReadWriteStatus, EOLStatus,
@@ -338,7 +338,8 @@ class EditorStack(QWidget):
         self.find_widget = None
 
         self.data = []
-        fileswitcher_action = create_action(self, _("File switcher..."),
+        fileswitcher_action = create_action(self, _("File switcher...") +\
+                '\t' + get_shortcut('_', 'file switcher'),
                 icon=ima.icon('filelist'),
                 triggered=self.open_fileswitcher_dlg)
         copy_to_cb_action = create_action(self, _("Copy path to clipboard"),
@@ -388,9 +389,8 @@ class EditorStack(QWidget):
         self.occurrence_highlighting_timeout=1500
         self.checkeolchars_enabled = True
         self.always_remove_trailing_spaces = False
-        self.fullpath_sorting_enabled = None
         self.focus_to_editor = True
-        self.set_fullpath_sorting_enabled(False)
+        self.set_fullpath_sorting_enabled(None)
         ccs = 'Spyder'
         if ccs not in syntaxhighlighters.COLOR_SCHEME_NAMES:
             ccs = syntaxhighlighters.COLOR_SCHEME_NAMES[0]
@@ -485,10 +485,13 @@ class EditorStack(QWidget):
 #                                              self.filelist_btn, self.next_btn,
 #                                              5, menu_btn]}
         corner_widgets = {Qt.TopRightCorner: [menu_btn]}
-        self.tabs = BaseTabs(self, menu=self.menu, menu_use_tooltips=True,
-                             corner_widgets=corner_widgets)
+        self.tabs = Tabs(self, menu=self.menu, menu_use_tooltips=True,
+                         corner_widgets=corner_widgets,setup_shortcuts=False)
         self.tabs.tabBar().setObjectName('plugin-tab')
+        self.tabs.tabBar().set_draggable(False)
         self.tabs.set_close_function(self.close_file)
+        self.tabs.move_data.connect(self.move_tab)
+        self.tabs.move_tab_finished.connect(self.move_tab_finished)
 
         if hasattr(self.tabs, 'setDocumentMode') \
            and not sys.platform == 'darwin':
@@ -540,10 +543,15 @@ class EditorStack(QWidget):
         """Open file list management dialog box"""
         if not self.tabs.count():
             return
-        self.fileswitcher_dlg = FileSwitcher(self, self.tabs, self.data)
-        self.fileswitcher_dlg.sig_goto_file.connect(self.set_stack_index)
-        self.fileswitcher_dlg.sig_close_file.connect(self.close_file)
-        self.fileswitcher_dlg.show()
+
+        if not self.fileswitcher_dlg:
+            self.fileswitcher_dlg = FileSwitcher(self, self.tabs, self.data)
+            self.fileswitcher_dlg.sig_goto_file.connect(self.set_stack_index)
+            self.fileswitcher_dlg.sig_close_file.connect(self.close_file)
+        if not self.fileswitcher_dlg.isVisible():
+            self.fileswitcher_dlg.save_initial_state()
+            self.fileswitcher_dlg.setup()
+            self.fileswitcher_dlg.show()
 
     def update_fileswitcher_dlg(self):
         """Synchronize file list dialog box with editor widget tabs"""
@@ -679,7 +687,7 @@ class EditorStack(QWidget):
         if self.data:
             for finfo in self.data:
                 finfo.editor.set_blanks_enabled(state)
-        
+
     def set_edgeline_enabled(self, state):
         # CONF.get(self.CONF_SECTION, 'edge_line')
         self.edgeline_enabled = state
@@ -842,9 +850,11 @@ class EditorStack(QWidget):
     def set_fullpath_sorting_enabled(self, state):
         # CONF.get(self.CONF_SECTION, 'fullpath_sorting')
         self.fullpath_sorting_enabled = state
+        self.tabs.tabBar().set_draggable(state is None)
         if self.data:
             finfo = self.data[self.get_stack_index()]
-            self.data.sort(key=self.__get_sorting_func())
+            if not self.fullpath_sorting_enabled is None:
+                self.data.sort(key=self.__get_sorting_func())
             new_index = self.data.index(finfo)
             self.__repopulate_stack()
             self.set_stack_index(new_index)
@@ -898,24 +908,14 @@ class EditorStack(QWidget):
 
     def get_tab_tip(self, filename, is_modified=None, is_readonly=None):
         """Return tab menu title"""
-        if self.fullpath_sorting_enabled:
-            text = filename
-        else:
-            text = u("%s — %s")
-        text = self.__modified_readonly_title(text,
+        text = self.__modified_readonly_title(filename,
                                               is_modified, is_readonly)
         if self.tempfile_path is not None\
            and filename == encoding.to_unicode_from_fs(self.tempfile_path):
             temp_file_str = to_text_string(_("Temporary file"))
-            if self.fullpath_sorting_enabled:
-                return "%s (%s)" % (text, temp_file_str)
-            else:
-                return text % (temp_file_str, self.tempfile_path)
+            return "%s (%s)" % (text, temp_file_str)
         else:
-            if self.fullpath_sorting_enabled:
-                return text
-            else:
-                return text % (osp.basename(filename), osp.dirname(filename))
+            return text
 
     def __get_sorting_func(self):
         if self.fullpath_sorting_enabled:
@@ -926,7 +926,8 @@ class EditorStack(QWidget):
 
     def add_to_data(self, finfo, set_current):
         self.data.append(finfo)
-        self.data.sort(key=self.__get_sorting_func())
+        if not self.fullpath_sorting_enabled is None:
+            self.data.sort(key=self.__get_sorting_func())
         index = self.data.index(finfo)
         fname, editor = finfo.filename, finfo.editor
         self.tabs.insertTab(index, editor, get_filetype_icon(fname),
@@ -964,7 +965,8 @@ class EditorStack(QWidget):
         set_new_index = index == self.get_stack_index()
         current_fname = self.get_current_filename()
         finfo.filename = new_filename
-        self.data.sort(key=self.__get_sorting_func())
+        if not self.fullpath_sorting_enabled is None:
+            self.data.sort(key=self.__get_sorting_func())
         new_index = self.data.index(finfo)
         self.__repopulate_stack()
         if set_new_index:
@@ -986,19 +988,47 @@ class EditorStack(QWidget):
         self.tabs.setTabText(index, tab_text)
         self.tabs.setTabToolTip(index, tab_tip)
 
+    def move_tab(self, index_from, index_to):
+        from_data = self.data[index_from]
+        self.data.remove(from_data)
+        self.data = self.data[:index_to] + [from_data] + self.data[index_to:]
+
+    def move_tab_finished(self):
+        for index in range(len(self.data)):
+            self.set_stack_title(index, False)
+        self.update_fileswitcher_dlg()
+        self.update_plugin_title.emit()
 
     #------ Context menu
     def __setup_menu(self):
         """Setup tab context menu before showing it"""
         self.menu.clear()
+
+        actions = self.__get_close_tab_actions()
         if self.data:
-            actions = self.menu_actions
+            actions += self.menu_actions
         else:
-            actions = (self.new_action, self.open_action)
+            actions += [self.new_action, self.open_action]
             self.setFocus() # --> Editor.__get_focus_editortabwidget
-        add_actions(self.menu, list(actions)+self.__get_split_actions())
+
+        add_actions(self.menu, actions + self.__get_split_actions())
         self.close_action.setEnabled(self.is_closable)
 
+    #------ Close tabs
+    def __get_close_tab_actions(self):
+        tb = self.tabs.tabBar()
+        mpos = tb.mapFromGlobal(QCursor.pos())
+        cur_tab = tb.tabAt(mpos)
+        if cur_tab == -1:
+            return []
+        close = create_action(self.menu, _('Close') + '\tCtrl+W',
+                triggered=lambda: self.close_file(cur_tab))
+        close_all = create_action(self.menu, _('Close All') +\
+                '\t' + get_shortcut('Editor', 'close all'),
+                triggered=lambda: self.close_all_files())
+        close_others = create_action(self.menu, _('Close Others'),
+                triggered=lambda: self.close_other_files(cur_tab))
+        return [close, close_all, close_others, None]
 
     #------ Hor/Ver splitting
     def __get_split_actions(self):
@@ -1125,6 +1155,16 @@ class EditorStack(QWidget):
             return False
 
         return is_ok
+
+    def close_other_files(self, index):
+        self.set_stack_index(index)
+        while index:
+            if not self.close_file(0):
+                return
+            index -= 1
+        while len(self.data) > 1:
+            if not self.close_file(1):
+                return
 
     def close_all_files(self):
         """Close all opened scripts"""
