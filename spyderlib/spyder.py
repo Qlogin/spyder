@@ -818,7 +818,11 @@ class MainWindow(QMainWindow):
         self.toolbarslist.append(self.workingdirectory)
 
         # Help plugin
-        if CONF.get('help', 'enable'):
+        dependencies.add("sphinx", _("Show help for objects in the Editor and "
+                                     "Consoles in a dedicated pane"),
+                         required_version='>=0.6.6')
+        if CONF.get('help', 'enable') and \
+          programs.is_module_installed('sphinx'):
             self.set_splash(_("Loading help..."))
             from spyderlib.plugins.help import Help
             self.help = Help(self)
@@ -959,8 +963,11 @@ class MainWindow(QMainWindow):
                                     icon=ima.icon('DialogHelpButton'),
                                     triggered=lambda : programs.start_file(spyder_doc))
 
-        tut_action = create_action(self, _("Spyder tutorial"),
-                                    triggered=self.help.show_tutorial)
+        if self.help is not None:
+            tut_action = create_action(self, _("Spyder tutorial"),
+                                       triggered=self.help.show_tutorial)
+        else:
+            tut_action = None
 
         #----- Tours
         self.tour = tour.AnimatedTour(self)
@@ -987,10 +994,9 @@ class MainWindow(QMainWindow):
             self.tours_menu = None
 
         self.help_menu_actions = [doc_action, tut_action, self.tours_menu,
-                                    None,
-                                    report_action, dep_action,
-                                    self.check_updates_action, support_action,
-                                    None]
+                                  None, report_action, dep_action,
+                                  self.check_updates_action, support_action,
+                                  None]
         # Python documentation
         if get_python_doc_path() is not None:
             pydoc_act = create_action(self, _("Python documentation"),
@@ -998,7 +1004,7 @@ class MainWindow(QMainWindow):
                                 programs.start_file(get_python_doc_path()))
             self.help_menu_actions.append(pydoc_act)
         # IPython documentation
-        if self.ipyconsole is not None:
+        if self.ipyconsole is not None and self.help is not None:
             ipython_menu = QMenu(_("IPython documentation"), self)
             intro_action = create_action(self, _("Intro to IPython"),
                                         triggered=self.ipyconsole.show_intro)
@@ -1016,7 +1022,7 @@ class MainWindow(QMainWindow):
             path = file_uri(path)
             action = create_action(self, text,
                     icon='%s.png' % osp.splitext(path)[1][1:],
-                    triggered=lambda path=path: programs.start_file(path))
+                    triggered=lambda checked=False, path=path: programs.start_file(path))
             ipm_actions.append(action)
         sysdocpth = osp.join(sys.prefix, 'Doc')
         if osp.isdir(sysdocpth): # exists on Windows, except frozen dist.
@@ -1258,7 +1264,9 @@ class MainWindow(QMainWindow):
             self.console.dockwidget.hide()
 
         # Show Help and Consoles by default
-        plugins_to_show = [self.help]
+        plugins_to_show = []
+        if self.help is not None:
+            plugins_to_show.append(self.help)
         if self.ipyconsole is not None:
             if self.ipyconsole.isvisible:
                 plugins_to_show += [self.extconsole, self.ipyconsole]
@@ -1667,10 +1675,12 @@ class MainWindow(QMainWindow):
 
         self.setUpdatesEnabled(True)
 
+    @Slot()
     def toggle_previous_layout(self):
         """ """
         self.toggle_layout('previous')
 
+    @Slot()
     def toggle_next_layout(self):
         """ """
         self.toggle_layout('next')
@@ -1905,6 +1915,7 @@ class MainWindow(QMainWindow):
             self.get_visible_toolbars()
         self._update_show_toolbars_action()
 
+    @Slot()
     def show_toolbars(self):
         """Show/Hides toolbars."""
         value = not self.toolbars_visible
@@ -2719,6 +2730,7 @@ class MainWindow(QMainWindow):
             req.sendall(b' ')
 
     # ---- Quit and restart, and reset spyder defaults
+    @Slot()
     def reset_spyder(self):
         """
         Quit and reset Spyder and then Restart application.
@@ -2730,6 +2742,7 @@ class MainWindow(QMainWindow):
         if answer == QMessageBox.Yes:
             self.restart(reset=True)
 
+    @Slot()
     def restart(self, reset=False):
         """
         Quit and Restart Spyder application.
@@ -2866,6 +2879,7 @@ class MainWindow(QMainWindow):
         # Provide feeback when clicking menu if check on startup is on
         self.give_updates_feedback = True
 
+    @Slot()
     def check_updates(self):
         """
         Check for spyder updates on github releases using a QThread.
