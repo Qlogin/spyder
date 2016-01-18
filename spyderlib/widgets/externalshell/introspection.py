@@ -177,8 +177,9 @@ class NotificationThread(QThread):
                 command = cdict['command']
                 data = cdict.get('data')
                 if command == 'pdb_step':
-                    fname, lineno = data
-                    self.sig_pdb.emit(fname, lineno)
+                    fname, lineno, interaction = data
+                    if interaction:
+                        self.sig_pdb.emit(fname, lineno)
                     self.refresh_namespace_browser.emit()
                 elif command == 'refresh':
                     self.refresh_namespace_browser.emit()

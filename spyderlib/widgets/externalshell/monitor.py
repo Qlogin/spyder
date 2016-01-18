@@ -318,10 +318,10 @@ class Monitor(threading.Thread):
     def register_pdb_session(self, pdb_obj):
         self.pdb_obj = pdb_obj
 
-    def notify_pdb_step(self, fname, lineno):
+    def notify_pdb_step(self, fname, lineno, userdata):
         """Notify the ExternalPythonShell regarding pdb current frame"""
         communicate(self.n_request,
-                    dict(command="pdb_step", data=(fname, lineno)))
+                    dict(command="pdb_step", data=(fname, lineno, userdata)))
 
     def set_spyder_breakpoints(self):
         """Set all Spyder breakpoints in active pdb session"""

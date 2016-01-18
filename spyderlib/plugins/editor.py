@@ -419,6 +419,7 @@ class Editor(SpyderPluginWidget):
         self.cursor_pos_history = []
         self.cursor_pos_index = None
         self.__ignore_cursor_position = True
+        self.execution_point = None
 
         self.editorstacks = []
         self.last_focus_editorstack = {}
@@ -1623,7 +1624,7 @@ class Editor(SpyderPluginWidget):
 
     @Slot(str, int, str, object)
     def load(self, filenames=None, goto=None, word='', editorwindow=None,
-             processevents=True):
+             processevents=True, set_execution=False):
         """
         Load a text file
         editorwindow: load in this editorwindow (useful when clicking on
@@ -1720,6 +1721,9 @@ class Editor(SpyderPluginWidget):
                 current_editor.go_to_line(goto[index], word=word)
                 position = current_editor.get_position('cursor')
                 self.cursor_moved(filename0, position0, filename, position)
+                if set_execution:
+                    self.execution_point = (current_editor, goto[index])
+                    current_editor.set_execution_line(goto[index])
             current_editor.clearFocus()
             current_editor.setFocus()
             current_editor.window().raise_()
@@ -2062,6 +2066,11 @@ class Editor(SpyderPluginWidget):
 
     def debug_command(self, command):
         """Debug actions"""
+        #self.main.edi
+        if self.execution_point:
+            editor, line = self.execution_point
+            self.execution_point = None
+            editor.set_execution_line(None)
         if self.main.ipyconsole is not None:
             if self.main.last_console_plugin_focus_was_python:
                 self.main.extconsole.execute_python_code(command)

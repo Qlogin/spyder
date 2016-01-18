@@ -255,6 +255,7 @@ class TextEditBaseWidget(QPlainTextEdit, BaseEditMixin):
         
         # The color values may be overridden by the syntax highlighter
         # Highlight current line color
+        self.execline_color    = QColor(Qt.blue).lighter(190)
         self.currentline_color = QColor(Qt.red).lighter(190)
         self.currentcell_color = QColor(Qt.red).lighter(194)
 
@@ -297,16 +298,11 @@ class TextEditBaseWidget(QPlainTextEdit, BaseEditMixin):
         self.extra_selections_dict[key] = extra_selections
         
     def update_extra_selections(self):
-        extra_selections = []
-        for key, extra in list(self.extra_selections_dict.items()):
-            if key == 'current_line' or key == 'current_cell':
-                # Python 3 compatibility (weird): current line has to be 
-                # highlighted first
-                extra_selections = extra + extra_selections
-            else:
-                extra_selections += extra
-        self.setExtraSelections(extra_selections)
-        
+        order = {'current_cell' : 0, 'current_line' : 1, 'execution_line' : 2}
+        extra_selections = sorted(self.extra_selections_dict.items(),
+                                  key=lambda x: order.get(x[0], len(order)))
+        self.setExtraSelections(sum((extra for key, extra in extra_selections), []))
+
     def clear_extra_selections(self, key):
         self.extra_selections_dict[key] = []
         self.update_extra_selections()
@@ -360,6 +356,23 @@ class TextEditBaseWidget(QPlainTextEdit, BaseEditMixin):
     def unhighlight_current_cell(self):
         """Unhighlight current cell"""
         self.clear_extra_selections('current_cell')
+
+    #------Highlight execution line
+    def highlight_execution_line(self, line):
+        """Highlight execution line"""
+        selection = QTextEdit.ExtraSelection()
+        selection.format.setProperty(QTextFormat.FullWidthSelection,
+                                     to_qvariant(True))
+        selection.format.setBackground(self.execline_color)
+        block = self.document().findBlockByNumber(line-1)
+        selection.cursor = QTextCursor(block)
+        selection.cursor.clearSelection()
+        self.set_extra_selections('execution_line', [selection])
+        self.update_extra_selections()
+
+    def unhighlight_execution_line(self):
+        """Unhighlight execution line"""
+        self.clear_extra_selections('execution_line')
 
     #------Brace matching
     def find_brace_match(self, position, brace, forward):

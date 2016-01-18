@@ -489,7 +489,7 @@ class SpyderPdb(pdb.Pdb):
                     self.set_break(self.canonic(fname), linenumber,
                                    cond=condition)
 
-    def notify_spyder(self, frame):
+    def notify_spyder(self, frame, interaction):
         if not frame:
             return
         fname = self.canonic(frame.f_code.co_filename)
@@ -501,7 +501,7 @@ class SpyderPdb(pdb.Pdb):
         lineno = frame.f_lineno
         if isinstance(fname, basestring) and isinstance(lineno, int):
             if osp.isfile(fname) and monitor is not None:
-                monitor.notify_pdb_step(fname, lineno)
+                monitor.notify_pdb_step(fname, lineno, interaction)
                 time.sleep(0.1)
                 
 pdb.Pdb = SpyderPdb
@@ -555,7 +555,7 @@ def user_return(self, frame, return_value):
 def interaction(self, frame, traceback):
     self.setup(frame, traceback)
     if self.send_initial_notification:
-        self.notify_spyder(frame) #-----Spyder-specific-----------------------
+        self.notify_spyder(frame, True) #-----Spyder-specific-----------------------
     self.print_stack_entry(self.stack[self.curindex])
     self.cmdloop()
     self.forget()
@@ -571,7 +571,7 @@ def reset(self):
 #     specific behaviour desired?)
 @monkeypatch_method(pdb.Pdb, 'Pdb')
 def postcmd(self, stop, line):
-    self.notify_spyder(self.curframe)
+    self.notify_spyder(self.curframe, False)
     return self._old_Pdb_postcmd(stop, line)
 
 # Breakpoints don't work for files with non-ascii chars in Python 2

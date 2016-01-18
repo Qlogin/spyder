@@ -280,6 +280,7 @@ class BlockUserData(QTextBlockUserData):
         self.breakpoint_condition = None
         self.code_analysis = []
         self.todo = ''
+        self.exec_line = False
         self.editor.blockuserdata_list.append(self)
 
     def is_empty(self):
@@ -398,6 +399,7 @@ class CodeEditor(TextEditBaseWidget):
         self.todo_pixmap = ima.icon('todo').pixmap(QSize(14, 14))
         self.bp_pixmap = ima.icon('breakpoint_big').pixmap(QSize(14, 14))
         self.bpc_pixmap = ima.icon('breakpoint_cond_big').pixmap(QSize(14, 14))
+        self.exec_pixmap = ima.icon('execution_line_big').pixmap(QSize(14, 14))
 
         # Line number area management
         self.linenumbers_margin = True
@@ -467,6 +469,7 @@ class CodeEditor(TextEditBaseWidget):
 
         # Block user data
         self.blockuserdata_list = []
+        self.execution_line = None
 
         # Update breakpoints if the number of lines in the file changes
         self.blockCountChanged.connect(self.update_breakpoints)
@@ -764,6 +767,25 @@ class CodeEditor(TextEditBaseWidget):
             self.highlight_current_cell()
         else:
             self.unhighlight_current_cell()
+
+    def set_execution_line(self, line):
+        if self.execution_line:
+            block = self.document().findBlockByNumber(self.execution_line-1)
+            data = block.userData()
+            if data:
+                data.exec_line = False
+                block.setUserData(data)
+        if line:
+            self.highlight_execution_line(line)
+            block = self.document().findBlockByNumber(line-1)
+            data = block.userData()
+            if not data:
+                data = BlockUserData(self)
+            data.exec_line = True
+            block.setUserData(data)
+        else:
+            self.unhighlight_execution_line()
+        self.execution_line = line
 
     def set_language(self, language, filename=None):
         self.tab_indents = language in self.TAB_ALWAYS_INDENTS
@@ -1149,6 +1171,13 @@ class CodeEditor(TextEditBaseWidget):
 
             data = block.userData()
             if self.markers_margin and data:
+                if data.todo:
+                    draw_pixmap(top, self.todo_pixmap)
+                if data.breakpoint:
+                    if data.breakpoint_condition is None:
+                        draw_pixmap(top, self.bp_pixmap)
+                    else:
+                        draw_pixmap(top, self.bpc_pixmap)
                 if data.code_analysis:
                     for _message, error in data.code_analysis:
                         if error:
@@ -1157,13 +1186,8 @@ class CodeEditor(TextEditBaseWidget):
                         draw_pixmap(top, self.error_pixmap)
                     else:
                         draw_pixmap(top, self.warning_pixmap)
-                if data.todo:
-                    draw_pixmap(top, self.todo_pixmap)
-                if data.breakpoint:
-                    if data.breakpoint_condition is None:
-                        draw_pixmap(top, self.bp_pixmap)
-                    else:
-                        draw_pixmap(top, self.bpc_pixmap)
+                if data.exec_line:
+                    draw_pixmap(top, self.exec_pixmap)
 
     def __get_linenumber_from_mouse_event(self, event):
         """Return line number from mouse event"""
