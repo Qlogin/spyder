@@ -249,7 +249,7 @@ class DirView(QTreeView):
         rename_action = create_action(self, _("Rename..."),
                                       icon=ima.icon('rename'),
                                       triggered=self.rename)
-        open_action = create_action(self, _("Open"), triggered=self.open)
+        open_action = create_action(self, _("Open"), triggered=self.open_outside_spyder)
         ipynb_convert_action = create_action(self, _("Convert to Python script"),
                                              icon=ima.icon('python'),
                                              triggered=self.convert_notebooks)
@@ -259,6 +259,8 @@ class DirView(QTreeView):
             actions.append(run_action)
         if only_valid and only_files:
             actions.append(edit_action)
+            if not only_modules:
+                actions.append(open_action)
         else:
             actions.append(open_action)
         actions += [delete_action, rename_action]
@@ -425,10 +427,13 @@ class DirView(QTreeView):
                 self.parent_widget.sig_open_file.emit(fname)
             else:
                 self.open_outside_spyder([fname])
-        
-    def open_outside_spyder(self, fnames):
+
+    @Slot()
+    def open_outside_spyder(self, fnames=None):
         """Open file outside Spyder with the appropriate application
         If this does not work, opening unknown file in Spyder, as text file"""
+        if fnames is None:
+            fnames = self.get_selected_filenames()
         for path in sorted(fnames):
             path = file_uri(path)
             ok = programs.start_file(path)
