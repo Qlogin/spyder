@@ -18,7 +18,7 @@ from spyderlib.qt.QtGui import (QWidget, QDialog, QListWidget, QListWidgetItem,
                                 QHBoxLayout, QDialogButtonBox, QCheckBox,
                                 QMessageBox, QLabel, QLineEdit, QSpinBox,
                                 QPushButton, QFontComboBox, QGroupBox,
-                                QComboBox, QColor, QGridLayout,
+                                QComboBox, QColor, QGridLayout, QPalette,
                                 QRadioButton, QButtonGroup, QSplitter,
                                 QStyleFactory, QScrollArea, QDoubleSpinBox)
 from spyderlib.qt.QtCore import Qt, QSize, Signal, Slot
@@ -1092,6 +1092,7 @@ class ColorSchemeConfigPage(GeneralConfigPage):
                                          color_scheme=scheme_name)
         self.preview_editor.set_text(text)
         self.preview_editor.set_language('Python')
+        self.preview_editor.set_execution_line(10)
 
     # Actions
     # -------------------------------------------------------------------------
@@ -1273,7 +1274,7 @@ class SchemeEditor(QDialog):
         color_scheme_groups = [
             (_('Text'), ["normal", "comment", "string", "number", "keyword",
                          "builtin", "definition", "instance", ]),
-            (_('Highlight'), ["currentcell", "currentline", "occurrence",
+            (_('Highlight'), ["currentcell", "currentline", "occurrence", "execline",
                               "matched_p", "unmatched_p", "ctrlclick"]),
             (_('Background'), ["background", "sideareas"])
             ]
@@ -1295,7 +1296,11 @@ class SchemeEditor(QDialog):
         self.scheme_name_textbox[scheme_name] = line_edit.textbox
 
         if not custom:
-            line_edit.textbox.setDisabled(True)
+            line_edit.textbox.setReadOnly(True)
+            pal = line_edit.textbox.palette()
+            pal.setBrush(QPalette.Normal, QPalette.Base,
+                         pal.brush(QPalette.Disabled, QPalette.Base))
+            line_edit.textbox.setPalette(pal)
 
         cs_layout = QVBoxLayout()
         cs_layout.addLayout(name_layout)

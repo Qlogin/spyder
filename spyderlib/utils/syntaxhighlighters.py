@@ -41,11 +41,12 @@ COLOR_SCHEME_KEYS = {
                       "background":     _("Background:"),
                       "currentline":    _("Current line:"),
                       "currentcell":    _("Current cell:"),
+                      "execline":       _("Execution point:"),
                       "occurrence":     _("Occurrence:"),
                       "ctrlclick":      _("Link:"),
                       "sideareas":      _("Side areas:"),
-                      "matched_p":      _("Matched <br>parens:"),
-                      "unmatched_p":    _("Unmatched <br>parens:"),
+                      "matched_p":      _("Matched parens:"),
+                      "unmatched_p":    _("Unmatched parens:"),
                       "normal":         _("Normal text:"),
                       "keyword":        _("Keyword:"),
                       "builtin":        _("Builtin:"),
@@ -125,6 +126,7 @@ class BaseSH(QSyntaxHighlighter):
         self.sideareas_color = None
         self.matched_p_color = None
         self.unmatched_p_color = None
+        self.execline_color = None
 
         self.formats = None
         self.setup_formats(font)
@@ -159,6 +161,9 @@ class BaseSH(QSyntaxHighlighter):
     def get_unmatched_p_color(self):
         return QColor(self.unmatched_p_color)
 
+    def get_execline_color(self):
+        return QColor(self.execline_color)
+
     def get_comment_color(self):
         """ Return color for the comments """
         return self.formats['comment'].foreground().color()
@@ -183,6 +188,7 @@ class BaseSH(QSyntaxHighlighter):
         self.sideareas_color = colors.pop("sideareas")
         self.matched_p_color = colors.pop("matched_p")
         self.unmatched_p_color = colors.pop("unmatched_p")
+        self.execline_color = colors.pop("execline")
         for name, (color, bold, italic) in list(colors.items()):
             format = QTextCharFormat(base_format)
             format.setForeground(QColor(color))

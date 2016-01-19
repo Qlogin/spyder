@@ -46,6 +46,7 @@ _qtaargs = {
     'filecloseall':            [('fa.close', 'fa.close', 'fa.close'), {'options': [{'scale_factor': 0.6, 'offset': (0.3, -0.3)},  {'scale_factor': 0.6, 'offset': (-0.3, -0.3)}, {'scale_factor': 0.6, 'offset': (0.3, 0.3)}]}],
     'breakpoint_big':          [('fa.circle',), {'color': 'darkred'} ],
     'breakpoint_cond_big':     [('fa.question-circle',), {'color':  'darkred'},],
+    'execution_line_big':      [('fa.arrow-right',), {'color': '#C0C000'},],
     'debug':                   [('spyder.debug',), {'color': '#3775a9'}],
     'arrow-step-over':         [('spyder.step-forward',), {'color': '#3775a9'}],
     'arrow-continue':          [('spyder.continue',), {'color': '#3775a9'}],
